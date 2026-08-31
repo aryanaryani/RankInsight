@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RankInsight — SEO Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ===== AUTH VIEW ===== -->
+<section id="view-auth" class="auth-screen">
+  <div class="auth-card">
+    <div class="auth-brand">
+      <span class="auth-mark">RI</span>
+      <h1>RankInsight</h1>
+    </div>
+    <p class="auth-sub">Know exactly where your site stands, and what to fix.</p>
+
+    <div class="tabs">
+      <button id="tab-login" class="tab active" type="button">Log in</button>
+      <button id="tab-signup" class="tab" type="button">Sign up</button>
+    </div>
+
+    <form id="form-auth">
+      <label>Email
+        <input type="email" id="input-email" required placeholder="you@example.com" />
+      </label>
+      <label>Password
+        <input type="password" id="input-password" required placeholder="••••••••" minlength="6" />
+      </label>
+      <button type="submit" id="btn-auth-submit" class="btn-primary">Log in</button>
+    </form>
+    <p id="auth-message" class="message"></p>
+  </div>
+</section>
+
+<!-- ===== MAIN APP ===== -->
+<div id="view-app" class="app-shell hidden">
+
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="sidebar">
+    <div class="sidebar-top">
+      <div class="brand">
+        <span class="brand-mark">RI</span>
+        <span class="brand-name">RankInsight</span>
+      </div>
+      <button id="btn-logout" class="btn-ghost-sm" type="button">Log out</button>
+    </div>
+
+    <div id="credits-badge" class="credits-badge"></div>
+
+    <div class="add-site">
+      <h2>Analyze a website</h2>
+      <label>URL
+        <input type="text" id="input-url" placeholder="https://example.com" />
+      </label>
+      <div class="field-row">
+        <label>Language
+          <input type="text" id="input-language" placeholder="en" />
+        </label>
+        <label>Location
+          <input type="text" id="input-location" placeholder="in" />
+        </label>
+      </div>
+      <button id="btn-analyze" class="btn-primary" type="button">Analyze website</button>
+    </div>
+
+    <div class="site-list-head">
+      <h2>Your websites</h2>
+      <button id="btn-refresh-websites" class="btn-link" type="button">Refresh</button>
+    </div>
+    <ul id="site-list" class="site-list"></ul>
+
+    <p id="app-message" class="message"></p>
+  </aside>
+
+  <!-- ===== MAIN ===== -->
+  <main class="main">
+
+    <div id="empty-state" class="empty-state">
+      <span class="empty-mark">↳</span>
+      <h2>Pick a website to see its report</h2>
+      <p>Or paste a URL on the left and hit Analyze to start tracking a new one.</p>
+    </div>
+
+    <div id="loading" class="loading hidden">Working…</div>
+
+    <div id="report-view" class="report-view hidden">
+
+      <header class="report-header">
+        <div>
+          <h1 id="report-title"></h1>
+          <span id="report-niche" class="report-niche"></span>
+        </div>
+        <button id="btn-rank-check" class="btn-primary" type="button">Check rankings</button>
+      </header>
+
+      <div class="stat-row">
+        <div class="stat">
+          <span id="stat-total" class="stat-num">0</span>
+          <span class="stat-label">Total keywords</span>
+        </div>
+        <div class="stat">
+          <span id="stat-ranking" class="stat-num stat-good">0</span>
+          <span class="stat-label">Ranking</span>
+        </div>
+        <div class="stat">
+          <span id="stat-not-ranking" class="stat-num stat-muted">0</span>
+          <span class="stat-label">Not ranking</span>
+        </div>
+        <div class="stat">
+          <span id="stat-best" class="stat-num">–</span>
+          <span class="stat-label">Best position</span>
+        </div>
+        <div class="stat">
+          <span id="stat-avg" class="stat-num">–</span>
+          <span class="stat-label">Avg position</span>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table id="keywords-table">
+          <thead>
+            <tr>
+              <th>Keyword</th>
+              <th>Type</th>
+              <th>Position</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="keywords-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- ===== RECOMMENDATION PANEL ===== -->
+  <aside id="recommendation-panel" class="rec-panel hidden">
+    <div class="rec-head">
+      <span id="recommendation-keyword"></span>
+      <button id="btn-close-recommendation" class="btn-ghost-sm" type="button">Close</button>
+    </div>
+    <div class="rec-body">
+      <div class="rec-block">
+        <h3>Why it's not ranking well</h3>
+        <p id="rec-reason"></p>
+      </div>
+      <div class="rec-block">
+        <h3>What to improve</h3>
+        <p id="rec-suggestions"></p>
+      </div>
+      <div class="rec-block">
+        <h3>Competitor gaps</h3>
+        <p id="rec-gaps"></p>
+      </div>
+    </div>
+  </aside>
+
+</div>
+
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
