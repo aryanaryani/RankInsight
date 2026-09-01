@@ -117,6 +117,63 @@ function authHeaders() {
   };
 }
 
+// Uses the stored refresh_token to get a fresh access_token from Supabase.
+// Supabase access tokens expire after 1 hour — this keeps the user logged
+// in without them noticing, instead of every request failing with
+// "JWT expired" once the hour is up.
+async function refreshAccessToken() {
+  if (!session?.refresh_token) return false;
+  try {
+    const res = await fetch(`${AUTH_BASE}/token?grant_type=refresh_token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: CONFIG.SUPABASE_ANON_KEY },
+      body: JSON.stringify({ refresh_token: session.refresh_token }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.access_token) return false;
+    saveSession({
+      access_token: data.access_token,
+      refresh_token: data.refresh_token || session.refresh_token,
+      user: data.user || session.user,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Drop-in replacement for fetch() on any authenticated call. If the token
+// has expired, it silently refreshes and retries once. If the refresh
+// token itself is invalid/expired (e.g. user hasn't opened the app in
+// weeks), it logs the user out with a clear message instead of leaving
+// them stuck looking at cryptic "JWT expired" errors.
+async function apiFetch(url, options = {}) {
+  const headers = options.headers || authHeaders();
+  let res = await fetch(url, { ...options, headers });
+
+  const looksExpired =
+    res.status === 401 ||
+    (res.status === 403 &&
+      (await res
+        .clone()
+        .json()
+        .catch(() => ({})))?.message?.toLowerCase()
+        .includes('jwt'));
+
+  if (looksExpired) {
+    const refreshed = await refreshAccessToken();
+    if (!refreshed) {
+      clearSession();
+      showAuth();
+      setAuthMessage('Your session expired. Please log in again.', true);
+      throw new Error('Session expired');
+    }
+    res = await fetch(url, { ...options, headers: options.headers ? options.headers : authHeaders() });
+  }
+
+  return res;
+}
+
 function escapeHtml(str) {
   const div = document.createElement('div');
   div.textContent = str;
@@ -173,7 +230,7 @@ formAuth.addEventListener('submit', async (e) => {
       if (!res.ok) throw new Error(data.error_description || data.msg || 'Signup failed');
 
       if (data.access_token) {
-        saveSession({ access_token: data.access_token, user: data.user });
+        saveSession({ access_token: data.access_token, refresh_token: data.refresh_token, user: data.user });
         showApp();
       } else {
         setAuthMessage('Signup successful! Check your email to confirm, then log in.', false);
@@ -188,7 +245,7 @@ formAuth.addEventListener('submit', async (e) => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error_description || data.msg || 'Login failed');
 
-      saveSession({ access_token: data.access_token, user: data.user });
+      saveSession({ access_token: data.access_token, refresh_token: data.refresh_token, user: data.user });
       showApp();
     }
   } catch (err) {
@@ -218,7 +275,7 @@ function showApp() {
 
 async function refreshCredits() {
   try {
-    const res = await fetch(`${REST_BASE}/profiles?select=credits_remaining,plan`, {
+    const res = await apiFetch(`${REST_BASE}/profiles?select=credits_remaining,plan`, {
       headers: { ...authHeaders(), Accept: 'application/vnd.pgrst.object+json' },
     });
     const profile = await res.json();
@@ -239,7 +296,7 @@ btnAnalyze.addEventListener('click', async () => {
   btnAnalyze.disabled = true;
   btnAnalyze.textContent = 'Analyzing…';
   try {
-    const res = await fetch(`${FUNCTIONS_BASE}/analyze-website`, {
+    const res = await apiFetch(`${FUNCTIONS_BASE}/analyze-website`, {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify({
@@ -268,7 +325,7 @@ btnAnalyze.addEventListener('click', async () => {
 // ---------- Website list (sidebar) ----------
 async function refreshWebsiteList(selectId) {
   try {
-    const res = await fetch(
+    const res = await apiFetch(
       `${REST_BASE}/websites?select=id,url,niche,last_crawled_at&order=created_at.desc`,
       { headers: authHeaders() }
     );
@@ -327,7 +384,7 @@ async function loadReport(websiteId) {
   showLoading(true);
   recPanel.classList.add('hidden');
   try {
-    const res = await fetch(`${FUNCTIONS_BASE}/report?website_id=${websiteId}`, {
+    const res = await apiFetch(`${FUNCTIONS_BASE}/report?website_id=${websiteId}`, {
       headers: authHeaders(),
     });
     const data = await res.json();
@@ -384,7 +441,7 @@ btnRankCheck.addEventListener('click', async () => {
   btnRankCheck.disabled = true;
   btnRankCheck.textContent = 'Checking…';
   try {
-    const res = await fetch(`${FUNCTIONS_BASE}/rank-check?website_id=${currentWebsiteId}`, {
+    const res = await apiFetch(`${FUNCTIONS_BASE}/rank-check?website_id=${currentWebsiteId}`, {
       method: 'POST',
       headers: authHeaders(),
     });
@@ -409,7 +466,7 @@ async function loadHistory(websiteId) {
   historyChart.innerHTML = '';
 
   try {
-    const res = await fetch(`${FUNCTIONS_BASE}/rank-history?website_id=${websiteId}`, {
+    const res = await apiFetch(`${FUNCTIONS_BASE}/rank-history?website_id=${websiteId}`, {
       headers: authHeaders(),
     });
     const data = await res.json();
@@ -477,7 +534,7 @@ btnGscConnect.addEventListener('click', async () => {
   if (!currentWebsiteId) return;
   btnGscConnect.disabled = true;
   try {
-    const res = await fetch(
+    const res = await apiFetch(
       `${FUNCTIONS_BASE}/gsc-oauth-start?website_id=${currentWebsiteId}&redirect=${encodeURIComponent(gscRedirectUrl())}`,
       { headers: authHeaders() }
     );
@@ -498,7 +555,7 @@ async function loadGscData(websiteId) {
   btnGscConnect.textContent = 'Connect Search Console';
 
   try {
-    const res = await fetch(`${FUNCTIONS_BASE}/gsc-data?website_id=${websiteId}`, {
+    const res = await apiFetch(`${FUNCTIONS_BASE}/gsc-data?website_id=${websiteId}`, {
       headers: authHeaders(),
     });
     const data = await res.json();
@@ -565,7 +622,7 @@ async function loadRecommendation(keywordText) {
 
   showLoading(true);
   try {
-    const kwRes = await fetch(
+    const kwRes = await apiFetch(
       `${REST_BASE}/keywords?website_id=eq.${currentWebsiteId}&keyword=eq.${encodeURIComponent(keywordText)}&select=id`,
       { headers: authHeaders() }
     );
@@ -573,7 +630,7 @@ async function loadRecommendation(keywordText) {
     if (!kwRes.ok || !kwData[0]) throw new Error('Could not find keyword record');
     const keywordId = kwData[0].id;
 
-    const res = await fetch(
+    const res = await apiFetch(
       `${FUNCTIONS_BASE}/recommendations?website_id=${currentWebsiteId}&keyword_id=${keywordId}`,
       { method: 'POST', headers: authHeaders() }
     );
