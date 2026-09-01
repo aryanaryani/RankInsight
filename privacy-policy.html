@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy - RankInsight</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #10b981;
+            --primary-dark: #059669;
+            --primary-light: rgba(16, 185, 129, 0.1);
+            --bg-dark: #090d16;
+            --card-bg: #111827;
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --text-soft: #6b7280;
+            --accent-glow: rgba(16, 185, 129, 0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            line-height: 1.7;
+            padding: 0;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Ambient Glow Background */
+        .glow-overlay {
+            position: fixed;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 800px;
+            height: 450px;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        header {
+            position: relative;
+            z-index: 10;
+            border-bottom: 1px solid var(--card-border);
+            backdrop-filter: blur(12px);
+            background: rgba(9, 13, 22, 0.8);
+        }
+
+        .nav-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 18px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .brand-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            color: var(--text-main);
+            font-weight: 800;
+            font-size: 1.25rem;
+            letter-spacing: -0.5px;
+        }
+
+        .brand-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #10b981, #047857);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: 700;
+            font-size: 16px;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+        }
+
+        .back-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: color 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .back-link:hover {
+            color: var(--primary);
+        }
+
+        main {
+            position: relative;
+            z-index: 10;
+            max-width: 850px;
+            margin: 40px auto 60px;
+            padding: 0 24px;
+            flex-grow: 1;
+        }
+
+        .policy-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .badge {
+            display: inline-block;
+            background: var(--primary-light);
+            color: var(--primary);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            padding: 4px 14px;
+            border-radius: 9999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 14px;
+        }
+
+        h1 {
+            font-size: 2.35rem;
+            font-weight: 800;
+            letter-spacing: -0.8px;
+            color: #ffffff;
+            margin-bottom: 12px;
+        }
+
+        .last-updated {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .content-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 36px 32px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .intro-lead {
+            font-size: 1.05rem;
+            color: #d1d5db;
+            margin-bottom: 28px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        section {
+            margin-bottom: 32px;
+        }
+
+        section:last-child {
+            margin-bottom: 0;
+        }
+
+        h2 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        h2 .section-num {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 26px;
+            height: 26px;
+            border-radius: 6px;
+            background: var(--primary-light);
+            color: var(--primary);
+            font-size: 0.85rem;
+            font-weight: 700;
+        }
+
+        p {
+            color: var(--text-muted);
+            font-size: 0.96rem;
+            margin-bottom: 14px;
+        }
+
+        ul {
+            list-style: none;
+            padding-left: 0;
+            margin: 12px 0 16px;
+        }
+
+        li {
+            position: relative;
+            padding-left: 24px;
+            margin-bottom: 10px;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        li::before {
+            content: "•";
+            position: absolute;
+            left: 8px;
+            color: var(--primary);
+            font-weight: bold;
+            font-size: 1.2rem;
+            line-height: 1;
+        }
+
+        .highlight-box {
+            background: rgba(16, 185, 129, 0.05);
+            border-left: 3px solid var(--primary);
+            padding: 14px 18px;
+            border-radius: 0 8px 8px 0;
+            margin: 18px 0;
+        }
+
+        .highlight-box p {
+            margin: 0;
+            color: #e5e7eb;
+            font-size: 0.92rem;
+        }
+
+        a.link {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: text-decoration 0.2s;
+        }
+
+        a.link:hover {
+            text-decoration: underline;
+        }
+
+        footer {
+            border-top: 1px solid var(--card-border);
+            padding: 24px;
+            text-align: center;
+            color: var(--text-soft);
+            font-size: 0.85rem;
+            background: rgba(9, 13, 22, 0.95);
+        }
+
+        @media (max-width: 640px) {
+            h1 {
+                font-size: 1.85rem;
+            }
+            .content-card {
+                padding: 24px 18px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="glow-overlay"></div>
+
+    <header>
+        <div class="nav-container">
+            <a href="https://rankinsight.vercel.app/" class="brand-logo">
+                <div class="brand-icon">R</div>
+                <span>RankInsight</span>
+            </a>
+            <a href="https://rankinsight.vercel.app/" class="back-link">
+                &larr; Back to App
+            </a>
+        </div>
+    </header>
+
+    <main>
+        <div class="policy-header">
+            <span class="badge">Legal & Security</span>
+            <h1>Privacy Policy</h1>
+            <p class="last-updated">Last Updated: September 1, 2026</p>
+        </div>
+
+        <div class="content-card">
+            <p class="intro-lead">
+                Welcome to <strong>RankInsight</strong> (<a href="https://rankinsight.vercel.app/" class="link">rankinsight.vercel.app</a>). We respect your privacy and are committed to protecting any data processed through our website and browser extension. This Privacy Policy explains how our tool operates regarding data collection, usage, and user privacy.
+            </p>
+
+            <section>
+                <h2><span class="section-num">1</span> Information We Process</h2>
+                <p>RankInsight is designed to be lightweight, fast, and privacy-first. Here is how we handle information:</p>
+                <ul>
+                    <li><strong>URL & Page SEO Metadata:</strong> When you analyze a website or run the extension, the tool evaluates public page metadata, heading tags, keyword occurrences, and on-page performance metrics solely to display your audit report.</li>
+                    <li><strong>No Personal Identifiable Information (PII):</strong> We do not ask for, capture, or store personal information such as your passwords, financial records, or private browsing history.</li>
+                    <li><strong>User Preferences:</strong> Any settings (such as theme preferences or search parameters) are stored locally on your device via standard browser storage APIs (`chrome.storage` or `localStorage`).</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2><span class="section-num">2</span> Extension Permissions & API Usage</h2>
+                <p>Our browser extension and web tools request only the minimal permissions required to provide SEO insights:</p>
+                <ul>
+                    <li><strong>Active Tab Access:</strong> Used exclusively when you trigger the extension popup to analyze the active webpage's public structure.</li>
+                    <li><strong>Storage:</strong> Used to temporarily save your audit configurations or cached results on your local device.</li>
+                </ul>
+                <div class="highlight-box">
+                    <p><strong>Note:</strong> RankInsight does not track your general browsing behavior across unrelated websites, nor do we run background monitoring scripts without your direct action.</p>
+                </div>
+            </section>
+
+            <section>
+                <h2><span class="section-num">3</span> Data Storage & Sharing</h2>
+                <p>We believe in strict zero-leakage principles:</p>
+                <ul>
+                    <li><strong>No Sale of Data:</strong> We never sell, lease, or monetize user data with third-party advertisers or data brokers.</li>
+                    <li><strong>Third-Party Hosting:</strong> Our web application is hosted on Vercel infrastructure, which complies with high industry standards for security and reliability.</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2><span class="section-num">4</span> Security of Your Data</h2>
+                <p>All communication between your browser and our web application is encrypted using standard HTTPS/TLS protocols. We regularly review our codebase and security configurations to ensure a safe user experience.</p>
+            </section>
+
+            <section>
+                <h2><span class="section-num">5</span> Third-Party Links</h2>
+                <p>RankInsight may contain links to third-party websites or resources. We are not responsible for the privacy practices or content of external sites. We encourage you to review their respective privacy policies.</p>
+            </section>
+
+            <section>
+                <h2><span class="section-num">6</span> Changes to This Policy</h2>
+                <p>We may update our Privacy Policy periodically to reflect changes in our service or regulatory requirements. Any updates will be posted on this page with an updated "Last Updated" date.</p>
+            </section>
+
+            <section>
+                <h2><span class="section-num">7</span> Contact Us</h2>
+                <p>If you have any questions, feedback, or concerns regarding this Privacy Policy or your privacy while using RankInsight, please contact us at:</p>
+                <p>
+                    <strong>Website:</strong> <a href="https://rankinsight.vercel.app/" class="link">https://rankinsight.vercel.app/</a><br>
+                    <strong>Support:</strong> Available via our official web portal.
+                </p>
+            </section>
+        </div>
+    </main>
+
+    <footer>
+        &copy; 2026 RankInsight. All rights reserved. Built for creators and developers.
+    </footer>
+
+</body>
+</html>
