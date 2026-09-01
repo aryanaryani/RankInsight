@@ -1,17 +1,20 @@
 // ============================================================
 // app.js — dashboard logic (no build step needed)
 // Talks to the SAME Supabase project + Edge Functions as the
-// Chrome extension (analyze-website, rank-check, recommendations, report).
+// Chrome extension (analyze-website, rank-check, recommendations,
+// report, rank-history, gsc-oauth-start, gsc-data).
 // ============================================================
 
 const FUNCTIONS_BASE = `${CONFIG.SUPABASE_URL}/functions/v1`;
 const REST_BASE = `${CONFIG.SUPABASE_URL}/rest/v1`;
 const AUTH_BASE = `${CONFIG.SUPABASE_URL}/auth/v1`;
 const SESSION_KEY = 'rankinsight_session';
+const THEME_KEY = 'rankinsight_theme';
 
 let session = null;
 let currentWebsiteId = null;
 let currentKeywords = [];
+let allWebsites = []; // cached for sidebar search/filter
 let authMode = 'login';
 
 // ---------- DOM refs ----------
@@ -25,6 +28,7 @@ const inputEmail = document.getElementById('input-email');
 const inputPassword = document.getElementById('input-password');
 const authMessage = document.getElementById('auth-message');
 
+const btnThemeToggle = document.getElementById('btn-theme-toggle');
 const btnLogout = document.getElementById('btn-logout');
 const creditsBadge = document.getElementById('credits-badge');
 const inputUrl = document.getElementById('input-url');
@@ -32,7 +36,9 @@ const inputLanguage = document.getElementById('input-language');
 const inputLocation = document.getElementById('input-location');
 const btnAnalyze = document.getElementById('btn-analyze');
 const btnRefreshWebsites = document.getElementById('btn-refresh-websites');
+const inputSiteSearch = document.getElementById('input-site-search');
 const siteList = document.getElementById('site-list');
+const siteListEmpty = document.getElementById('site-list-empty');
 const appMessage = document.getElementById('app-message');
 
 const emptyState = document.getElementById('empty-state');
@@ -47,6 +53,15 @@ const statNotRanking = document.getElementById('stat-not-ranking');
 const statBest = document.getElementById('stat-best');
 const statAvg = document.getElementById('stat-avg');
 const keywordsTbody = document.getElementById('keywords-tbody');
+
+const historyHint = document.getElementById('history-hint');
+const historyEmpty = document.getElementById('history-empty');
+const historyChart = document.getElementById('history-chart');
+
+const btnGscConnect = document.getElementById('btn-gsc-connect');
+const gscStatus = document.getElementById('gsc-status');
+const gscTableWrap = document.getElementById('gsc-table-wrap');
+const gscTbody = document.getElementById('gsc-tbody');
 
 const recPanel = document.getElementById('recommendation-panel');
 const recommendationKeyword = document.getElementById('recommendation-keyword');
@@ -107,6 +122,26 @@ function escapeHtml(str) {
   div.textContent = str;
   return div.innerHTML;
 }
+
+// ---------- Theme (dark mode) ----------
+function applyTheme(theme) {
+  document.body.dataset.theme = theme;
+  btnThemeToggle.textContent = theme === 'dark' ? '☀' : '☾';
+  localStorage.setItem(THEME_KEY, theme);
+}
+
+function initTheme() {
+  const saved = localStorage.getItem(THEME_KEY);
+  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  applyTheme(saved || (prefersDark ? 'dark' : 'light'));
+}
+
+btnThemeToggle.addEventListener('click', () => {
+  const next = document.body.dataset.theme === 'dark' ? 'light' : 'dark';
+  applyTheme(next);
+  // Re-render the chart so its stroke color matches the new theme.
+  if (currentWebsiteId && !reportView.classList.contains('hidden')) loadHistory(currentWebsiteId);
+});
 
 // ---------- Auth ----------
 tabLogin.addEventListener('click', () => switchAuthTab('login'));
@@ -177,7 +212,7 @@ function showAuth() {
 function showApp() {
   viewAuth.classList.add('hidden');
   viewApp.classList.remove('hidden');
-  refreshWebsiteList();
+  refreshWebsiteList().then(() => handleGscRedirectParam());
   refreshCredits();
 }
 
@@ -240,34 +275,51 @@ async function refreshWebsiteList(selectId) {
     const websites = await res.json();
     if (!res.ok) throw new Error(websites.message || 'Failed to load websites');
 
-    siteList.innerHTML = '';
-    websites.forEach((w) => {
-      const li = document.createElement('li');
-      li.className = 'site-item';
-      li.dataset.id = w.id;
-      if (w.id === (selectId || currentWebsiteId)) li.classList.add('active');
-
-      const niche = w.niche || 'No keywords yet';
-      li.innerHTML = `
-        <span class="site-item-url">${escapeHtml(w.url)}</span>
-        <span class="site-item-niche">${escapeHtml(niche)}</span>
-      `;
-      li.addEventListener('click', () => {
-        document.querySelectorAll('.site-item').forEach((el) => el.classList.remove('active'));
-        li.classList.add('active');
-        loadReport(w.id);
-      });
-      siteList.appendChild(li);
-    });
-
-    if (websites.length === 0) {
-      siteList.innerHTML = '<li style="padding:10px 11px;font-size:12.5px;color:rgba(255,255,255,0.45);">No websites yet — analyze one above.</li>';
-    }
+    allWebsites = websites;
+    renderSiteList(selectId);
   } catch (err) {
     setAppMessage(err.message);
   }
 }
 btnRefreshWebsites.addEventListener('click', () => refreshWebsiteList());
+
+function renderSiteList(selectId) {
+  const query = inputSiteSearch.value.trim().toLowerCase();
+  const filtered = query
+    ? allWebsites.filter(
+        (w) => w.url.toLowerCase().includes(query) || (w.niche || '').toLowerCase().includes(query)
+      )
+    : allWebsites;
+
+  siteList.innerHTML = '';
+  siteListEmpty.classList.toggle('hidden', filtered.length > 0 || allWebsites.length === 0);
+
+  if (allWebsites.length === 0) {
+    siteList.innerHTML = '<li style="padding:10px 11px;font-size:12.5px;color:rgba(255,255,255,0.45);">No websites yet — analyze one above.</li>';
+    return;
+  }
+
+  filtered.forEach((w) => {
+    const li = document.createElement('li');
+    li.className = 'site-item';
+    li.dataset.id = w.id;
+    if (w.id === (selectId || currentWebsiteId)) li.classList.add('active');
+
+    const niche = w.niche || 'No keywords yet';
+    li.innerHTML = `
+      <span class="site-item-url">${escapeHtml(w.url)}</span>
+      <span class="site-item-niche">${escapeHtml(niche)}</span>
+    `;
+    li.addEventListener('click', () => {
+      document.querySelectorAll('.site-item').forEach((el) => el.classList.remove('active'));
+      li.classList.add('active');
+      loadReport(w.id);
+    });
+    siteList.appendChild(li);
+  });
+}
+
+inputSiteSearch.addEventListener('input', () => renderSiteList());
 
 // ---------- Report ----------
 async function loadReport(websiteId) {
@@ -284,6 +336,8 @@ async function loadReport(websiteId) {
     currentWebsiteId = websiteId;
     currentKeywords = data.keywords;
     renderReport(data);
+    loadHistory(websiteId);
+    loadGscData(websiteId);
   } catch (err) {
     setAppMessage(err.message);
   } finally {
@@ -347,6 +401,163 @@ btnRankCheck.addEventListener('click', async () => {
   }
 });
 
+// ---------- Rank history (trend chart) ----------
+async function loadHistory(websiteId) {
+  historyChart.classList.add('hidden');
+  historyEmpty.classList.remove('hidden');
+  historyHint.textContent = '';
+  historyChart.innerHTML = '';
+
+  try {
+    const res = await fetch(`${FUNCTIONS_BASE}/rank-history?website_id=${websiteId}`, {
+      headers: authHeaders(),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to load history');
+
+    const trend = (data.trend || []).filter((p) => p.avg_position !== null);
+    if (trend.length < 2) return; // keep the empty-state hint
+
+    renderHistoryChart(trend);
+    historyEmpty.classList.add('hidden');
+    historyChart.classList.remove('hidden');
+    historyHint.textContent = `${trend.length} checks tracked`;
+  } catch {
+    // Non-critical — chart just stays in its empty state.
+  }
+}
+
+function renderHistoryChart(trend) {
+  const W = 640, H = 160, PAD = 24;
+  const positions = trend.map((p) => p.avg_position);
+  const maxPos = Math.max(...positions);
+  const minPos = Math.min(...positions);
+  // Position 1 is "best" so the axis is inverted: low position = high on chart.
+  const yRange = Math.max(maxPos - minPos, 1);
+
+  const xStep = trend.length > 1 ? (W - PAD * 2) / (trend.length - 1) : 0;
+  const points = trend.map((p, i) => {
+    const x = PAD + i * xStep;
+    const y = PAD + ((p.avg_position - minPos) / yRange) * (H - PAD * 2);
+    return { x, y, date: p.date, value: p.avg_position };
+  });
+
+  const linePath = points.map((pt, i) => `${i === 0 ? 'M' : 'L'} ${pt.x.toFixed(1)} ${pt.y.toFixed(1)}`).join(' ');
+  const areaPath = `${linePath} L ${points[points.length - 1].x.toFixed(1)} ${H - PAD} L ${points[0].x.toFixed(1)} ${H - PAD} Z`;
+
+  const dots = points
+    .map(
+      (pt) =>
+        `<circle class="history-dot" cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="3.5"><title>${pt.date}: avg #${pt.value}</title></circle>`
+    )
+    .join('');
+
+  const firstLabel = `<text class="history-axis-label" x="${points[0].x}" y="${H - 6}">${points[0].date}</text>`;
+  const lastLabel = `<text class="history-axis-label" x="${points[points.length - 1].x}" y="${H - 6}" text-anchor="end">${points[points.length - 1].date}</text>`;
+
+  historyChart.innerHTML = `
+    <path class="history-area" d="${areaPath}"></path>
+    <path class="history-line" d="${linePath}"></path>
+    ${dots}
+    ${firstLabel}
+    ${lastLabel}
+  `;
+}
+
+// ---------- Google Search Console ----------
+function gscRedirectUrl() {
+  // Bounce back to exactly this page (without stray query params from a
+  // previous run) so the OAuth callback can send the user right back here.
+  const u = new URL(window.location.href);
+  u.search = '';
+  return u.toString();
+}
+
+btnGscConnect.addEventListener('click', async () => {
+  if (!currentWebsiteId) return;
+  btnGscConnect.disabled = true;
+  try {
+    const res = await fetch(
+      `${FUNCTIONS_BASE}/gsc-oauth-start?website_id=${currentWebsiteId}&redirect=${encodeURIComponent(gscRedirectUrl())}`,
+      { headers: authHeaders() }
+    );
+    const data = await res.json();
+    if (!res.ok || !data.url) throw new Error(data.error || 'Could not start Search Console connection');
+    window.location.href = data.url; // hands off to Google's consent screen
+  } catch (err) {
+    setAppMessage(err.message);
+    btnGscConnect.disabled = false;
+  }
+});
+
+async function loadGscData(websiteId) {
+  gscTableWrap.classList.add('hidden');
+  gscTbody.innerHTML = '';
+  gscStatus.textContent = 'Loading…';
+  btnGscConnect.classList.remove('hidden');
+  btnGscConnect.textContent = 'Connect Search Console';
+
+  try {
+    const res = await fetch(`${FUNCTIONS_BASE}/gsc-data?website_id=${websiteId}`, {
+      headers: authHeaders(),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to load Search Console data');
+
+    if (!data.connected) {
+      gscStatus.textContent = 'Not connected — connect to see real clicks, impressions and average position from Google.';
+      return;
+    }
+
+    btnGscConnect.textContent = 'Reconnect';
+    gscStatus.textContent = `${data.property_url} · ${data.period.start} to ${data.period.end}`;
+
+    if (!data.rows || data.rows.length === 0) {
+      gscStatus.textContent += ' · No query data yet for this period.';
+      return;
+    }
+
+    data.rows.forEach((row) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${escapeHtml(row.query)}</td>
+        <td>${row.clicks}</td>
+        <td>${row.impressions}</td>
+        <td>${row.ctr}%</td>
+        <td>${row.position}</td>
+      `;
+      gscTbody.appendChild(tr);
+    });
+    gscTableWrap.classList.remove('hidden');
+  } catch (err) {
+    gscStatus.textContent = err.message;
+  }
+}
+
+// Handles the ?gsc=connected / ?gsc=denied / ?gsc=error / ?gsc=no_property
+// param that gsc-oauth-callback appends when it redirects back here.
+function handleGscRedirectParam() {
+  const params = new URLSearchParams(window.location.search);
+  const status = params.get('gsc');
+  if (!status) return;
+
+  const messages = {
+    connected: ['Search Console connected.', false],
+    denied: ['Search Console connection was cancelled.', true],
+    no_property: ["Connected, but no verified property matched this website's domain in your Search Console account.", true],
+    error: ['Search Console connection failed — please try again.', true],
+  };
+  const [text, isError] = messages[status] || ['', false];
+  if (text) setAppMessage(text, isError);
+
+  // Clean the URL so refreshing doesn't re-trigger this message.
+  const clean = new URL(window.location.href);
+  clean.search = '';
+  window.history.replaceState({}, '', clean.toString());
+
+  if (status === 'connected' && currentWebsiteId) loadGscData(currentWebsiteId);
+}
+
 // ---------- AI recommendation ----------
 async function loadRecommendation(keywordText) {
   const keywordRow = currentKeywords.find((k) => k.keyword === keywordText);
@@ -388,6 +599,7 @@ btnCloseRecommendation.addEventListener('click', () => {
 
 // ---------- Boot ----------
 (function init() {
+  initTheme();
   loadSession();
   if (session?.access_token) {
     showApp();

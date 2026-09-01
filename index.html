@@ -49,7 +49,10 @@
         <span class="brand-mark">RI</span>
         <span class="brand-name">RankInsight</span>
       </div>
-      <button id="btn-logout" class="btn-ghost-sm" type="button">Log out</button>
+      <div class="sidebar-top-actions">
+        <button id="btn-theme-toggle" class="btn-icon" type="button" title="Toggle theme" aria-label="Toggle dark mode">☾</button>
+        <button id="btn-logout" class="btn-ghost-sm" type="button">Log out</button>
+      </div>
     </div>
 
     <div id="credits-badge" class="credits-badge"></div>
@@ -74,7 +77,9 @@
       <h2>Your websites</h2>
       <button id="btn-refresh-websites" class="btn-link" type="button">Refresh</button>
     </div>
+    <input type="text" id="input-site-search" class="site-search" placeholder="Search websites…" />
     <ul id="site-list" class="site-list"></ul>
+    <p id="site-list-empty" class="site-list-empty hidden">No matches.</p>
 
     <p id="app-message" class="message"></p>
   </aside>
@@ -122,6 +127,35 @@
           <span class="stat-label">Avg position</span>
         </div>
       </div>
+
+      <!-- Rank history trend -->
+      <section class="panel-section" id="history-section">
+        <div class="panel-section-head">
+          <h2>Ranking trend</h2>
+          <span id="history-hint" class="panel-hint"></span>
+        </div>
+        <div id="history-chart-wrap" class="history-chart-wrap">
+          <p id="history-empty" class="panel-empty">Run "Check rankings" at least twice on different days to see a trend here.</p>
+          <svg id="history-chart" class="history-chart hidden" viewBox="0 0 640 160" preserveAspectRatio="none"></svg>
+        </div>
+      </section>
+
+      <!-- Google Search Console -->
+      <section class="panel-section" id="gsc-section">
+        <div class="panel-section-head">
+          <h2>Google Search Console</h2>
+          <button id="btn-gsc-connect" class="btn-secondary" type="button">Connect Search Console</button>
+        </div>
+        <p id="gsc-status" class="panel-hint"></p>
+        <div id="gsc-table-wrap" class="table-wrap hidden">
+          <table id="gsc-table">
+            <thead>
+              <tr><th>Query</th><th>Clicks</th><th>Impressions</th><th>CTR</th><th>Avg position</th></tr>
+            </thead>
+            <tbody id="gsc-tbody"></tbody>
+          </table>
+        </div>
+      </section>
 
       <div class="table-wrap">
         <table id="keywords-table">
