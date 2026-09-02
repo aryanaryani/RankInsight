@@ -27,6 +27,18 @@ const btnAuthSubmit = document.getElementById('btn-auth-submit');
 const inputEmail = document.getElementById('input-email');
 const inputPassword = document.getElementById('input-password');
 const authMessage = document.getElementById('auth-message');
+const tabsEl = document.querySelector('.tabs');
+
+const btnForgotLink = document.getElementById('btn-forgot-link');
+const forgotView = document.getElementById('forgot-password-view');
+const inputForgotEmail = document.getElementById('input-forgot-email');
+const btnForgotSubmit = document.getElementById('btn-forgot-submit');
+const btnForgotCancel = document.getElementById('btn-forgot-cancel');
+
+const resetView = document.getElementById('reset-password-view');
+const inputNewPassword = document.getElementById('input-new-password');
+const btnResetSubmit = document.getElementById('btn-reset-submit');
+let recoveryAccessToken = null;
 
 const btnThemeToggle = document.getElementById('btn-theme-toggle');
 const btnLogout = document.getElementById('btn-logout');
@@ -258,6 +270,106 @@ formAuth.addEventListener('submit', async (e) => {
 btnLogout.addEventListener('click', () => {
   clearSession();
   showAuth();
+});
+
+// ---------- Forgot password ----------
+btnForgotLink.addEventListener('click', () => {
+  formAuth.classList.add('hidden');
+  tabsEl.classList.add('hidden');
+  btnForgotLink.classList.add('hidden');
+  forgotView.classList.remove('hidden');
+  setAuthMessage('');
+});
+
+btnForgotCancel.addEventListener('click', () => {
+  forgotView.classList.add('hidden');
+  formAuth.classList.remove('hidden');
+  tabsEl.classList.remove('hidden');
+  btnForgotLink.classList.remove('hidden');
+  setAuthMessage('');
+});
+
+btnForgotSubmit.addEventListener('click', async () => {
+  const email = inputForgotEmail.value.trim();
+  if (!email) return setAuthMessage('Enter your email first.');
+
+  btnForgotSubmit.disabled = true;
+  btnForgotSubmit.textContent = 'Sending…';
+  try {
+    const res = await fetch(`${AUTH_BASE}/recover`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: CONFIG.SUPABASE_ANON_KEY },
+      body: JSON.stringify({ email, options: { redirect_to: window.location.origin + window.location.pathname } }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error_description || data.msg || 'Could not send the reset email. Please try again.');
+    }
+    setAuthMessage('Check your email for a password reset link.', false);
+  } catch (err) {
+    setAuthMessage(err.message);
+  } finally {
+    btnForgotSubmit.disabled = false;
+    btnForgotSubmit.textContent = 'Send reset link';
+  }
+});
+
+// ---------- Reset password (arriving from the emailed link) ----------
+// Supabase's reset link lands back on this page with a token in the URL
+// hash (#access_token=...&type=recovery) — no separate page needed.
+function checkForRecoveryLink() {
+  const hash = window.location.hash;
+  if (!hash.includes('type=recovery')) return;
+
+  const params = new URLSearchParams(hash.slice(1));
+  const accessToken = params.get('access_token');
+  if (!accessToken) return;
+
+  recoveryAccessToken = accessToken;
+  tabsEl.classList.add('hidden');
+  formAuth.classList.add('hidden');
+  btnForgotLink.classList.add('hidden');
+  forgotView.classList.add('hidden');
+  resetView.classList.remove('hidden');
+}
+checkForRecoveryLink();
+
+btnResetSubmit.addEventListener('click', async () => {
+  const password = inputNewPassword.value;
+  if (!password || password.length < 6) {
+    return setAuthMessage('Password must be at least 6 characters.');
+  }
+
+  btnResetSubmit.disabled = true;
+  btnResetSubmit.textContent = 'Saving…';
+  try {
+    const res = await fetch(`${AUTH_BASE}/user`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: CONFIG.SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${recoveryAccessToken}`,
+      },
+      body: JSON.stringify({ password }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error_description || data.msg || 'Could not update your password. The link may have expired — request a new one.');
+    }
+
+    history.replaceState(null, '', window.location.pathname); // clean the token out of the URL
+    resetView.classList.add('hidden');
+    formAuth.classList.remove('hidden');
+    tabsEl.classList.remove('hidden');
+    btnForgotLink.classList.remove('hidden');
+    switchAuthTab('login');
+    setAuthMessage('Password updated! Please log in with your new password.', false);
+  } catch (err) {
+    setAuthMessage(err.message);
+  } finally {
+    btnResetSubmit.disabled = false;
+    btnResetSubmit.textContent = 'Set new password';
+  }
 });
 
 // ---------- View switching ----------

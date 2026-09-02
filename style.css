@@ -240,6 +240,13 @@ input:focus {
   margin: 10px 0 0 0;
 }
 
+.forgot-link {
+  display: block;
+  text-align: center;
+  margin-top: 12px !important;
+  width: 100%;
+}
+
 /* ============ APP SHELL ============ */
 .app-shell {
   display: grid;

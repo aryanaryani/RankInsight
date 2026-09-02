@@ -36,6 +36,25 @@
       </label>
       <button type="submit" id="btn-auth-submit" class="btn-primary">Log in</button>
     </form>
+    <button id="btn-forgot-link" type="button" class="btn-link forgot-link">Forgot password?</button>
+
+    <!-- Shown instead of the form above when "Forgot password?" is clicked -->
+    <div id="forgot-password-view" class="hidden">
+      <label>Email
+        <input type="email" id="input-forgot-email" placeholder="you@example.com" />
+      </label>
+      <button id="btn-forgot-submit" type="button" class="btn-primary">Send reset link</button>
+      <button id="btn-forgot-cancel" type="button" class="btn-link forgot-link">Back to login</button>
+    </div>
+
+    <!-- Shown only when the user arrives here from the password-reset email link -->
+    <div id="reset-password-view" class="hidden">
+      <label>New password
+        <input type="password" id="input-new-password" minlength="6" placeholder="At least 6 characters" />
+      </label>
+      <button id="btn-reset-submit" type="button" class="btn-primary">Set new password</button>
+    </div>
+
     <p id="auth-message" class="message"></p>
   </div>
 </section>
