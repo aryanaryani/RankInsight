@@ -273,19 +273,93 @@ function showApp() {
   refreshCredits();
 }
 
+const btnUpgrade = document.getElementById('btn-upgrade');
+const upgradeMessage = document.getElementById('upgrade-message');
+
 async function refreshCredits() {
   try {
-    const res = await apiFetch(`${REST_BASE}/profiles?select=credits_remaining,plan`, {
+    const res = await apiFetch(`${REST_BASE}/profiles?select=credits_remaining,rank_check_credits_remaining,plan,plan_expires_at`, {
       headers: { ...authHeaders(), Accept: 'application/vnd.pgrst.object+json' },
     });
     const profile = await res.json();
     if (!res.ok) return;
-    creditsBadge.textContent =
-      profile.plan === 'pro' ? 'Pro plan' : `${profile.credits_remaining} credits left`;
+
+    if (profile.plan === 'pro') {
+      const renews = profile.plan_expires_at
+        ? new Date(profile.plan_expires_at).toLocaleDateString()
+        : '';
+      creditsBadge.textContent = `Pro plan${renews ? ' — renews ' + renews : ''}`;
+      btnUpgrade.classList.add('hidden');
+    } else {
+      creditsBadge.textContent = `${profile.credits_remaining} analyses · ${profile.rank_check_credits_remaining} rank checks left`;
+      btnUpgrade.classList.remove('hidden');
+    }
   } catch {
     // non-critical
   }
 }
+
+// ---------- Upgrade to Pro (Razorpay) ----------
+btnUpgrade.addEventListener('click', async () => {
+  upgradeMessage.textContent = '';
+  btnUpgrade.disabled = true;
+  btnUpgrade.textContent = 'Starting checkout…';
+  try {
+    const res = await apiFetch(`${FUNCTIONS_BASE}/create-order`, {
+      method: 'POST',
+      headers: authHeaders(),
+    });
+    const order = await res.json();
+    if (!res.ok) throw new Error(order.error || 'Could not start checkout.');
+
+    const rzp = new Razorpay({
+      key: order.key_id,
+      amount: order.amount,
+      currency: order.currency,
+      name: 'RankInsight',
+      description: 'Pro plan — 1 month',
+      order_id: order.order_id,
+      handler: async (response) => {
+        upgradeMessage.textContent = '';
+        btnUpgrade.textContent = 'Confirming payment…';
+        try {
+          const verifyRes = await apiFetch(`${FUNCTIONS_BASE}/verify-payment`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            }),
+          });
+          const verifyData = await verifyRes.json();
+          if (!verifyRes.ok) throw new Error(verifyData.error || 'Payment verification failed.');
+          upgradeMessage.style.color = 'var(--good)';
+          upgradeMessage.textContent = "You're now on Pro! 🎉";
+          await refreshCredits();
+        } catch (err) {
+          upgradeMessage.style.color = '';
+          upgradeMessage.textContent = err.message;
+        } finally {
+          btnUpgrade.disabled = false;
+          btnUpgrade.textContent = '⚡ Upgrade to Pro — ₹199/mo';
+        }
+      },
+      modal: {
+        ondismiss: () => {
+          btnUpgrade.disabled = false;
+          btnUpgrade.textContent = '⚡ Upgrade to Pro — ₹199/mo';
+        },
+      },
+      theme: { color: '#4338CA' },
+    });
+    rzp.open();
+  } catch (err) {
+    upgradeMessage.textContent = err.message;
+    btnUpgrade.disabled = false;
+    btnUpgrade.textContent = '⚡ Upgrade to Pro — ₹199/mo';
+  }
+});
 
 // ---------- Analyze website ----------
 btnAnalyze.addEventListener('click', async () => {

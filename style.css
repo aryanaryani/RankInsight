@@ -311,9 +311,24 @@ input:focus {
   border-radius: 20px;
   padding: 4px 10px;
   display: inline-block;
-  margin-bottom: 22px;
+  margin-bottom: 10px;
   width: fit-content;
 }
+
+.btn-upgrade {
+  width: 100%;
+  padding: 9px;
+  background: linear-gradient(135deg, #F5A623, #F76B1C);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-bottom: 22px;
+}
+.btn-upgrade:hover { filter: brightness(1.05); }
+.btn-upgrade:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .add-site {
   background: rgba(255,255,255,0.05);
