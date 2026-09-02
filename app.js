@@ -286,7 +286,7 @@ async function refreshCredits() {
 
     if (profile.plan === 'pro') {
       const renews = profile.plan_expires_at
-        ? new Date(profile.plan_expires_at).toLocaleDateString()
+        ? new Date(profile.plan_expires_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
         : '';
       creditsBadge.textContent = `Pro plan${renews ? ' — renews ' + renews : ''}`;
       btnUpgrade.classList.add('hidden');
