@@ -315,24 +315,62 @@ btnForgotSubmit.addEventListener('click', async () => {
 });
 
 // ---------- Reset password (arriving from the emailed link) ----------
-// Supabase's reset link lands back on this page with a token in the URL
-// hash (#access_token=...&type=recovery) — no separate page needed.
-function checkForRecoveryLink() {
+// Supabase redirects back to this page after email links (signup
+// confirmation, password reset, magic link) with info in the URL hash.
+// This one function handles all three cases:
+//   1. #error=...              → link was invalid/expired/already used
+//   2. #access_token=...&type=recovery → show the "set new password" form
+//   3. #access_token=...(signup/magic link) → log the user in as THAT
+//      account, replacing any stale session already in this browser
+function checkForAuthRedirect() {
   const hash = window.location.hash;
-  if (!hash.includes('type=recovery')) return;
-
+  if (!hash) return;
   const params = new URLSearchParams(hash.slice(1));
+
+  const error = params.get('error');
+  if (error) {
+    history.replaceState(null, '', window.location.pathname);
+    const desc = params.get('error_description');
+    setAuthMessage(
+      desc
+        ? decodeURIComponent(desc.replace(/\+/g, ' ')) + ' If you already used this link once, your email is likely already confirmed — just log in below.'
+        : 'That link is no longer valid. If you already used it once, just log in below.',
+      true
+    );
+    return;
+  }
+
   const accessToken = params.get('access_token');
   if (!accessToken) return;
 
-  recoveryAccessToken = accessToken;
-  tabsEl.classList.add('hidden');
-  formAuth.classList.add('hidden');
-  btnForgotLink.classList.add('hidden');
-  forgotView.classList.add('hidden');
-  resetView.classList.remove('hidden');
+  if (params.get('type') === 'recovery') {
+    recoveryAccessToken = accessToken;
+    tabsEl.classList.add('hidden');
+    formAuth.classList.add('hidden');
+    btnForgotLink.classList.add('hidden');
+    forgotView.classList.add('hidden');
+    resetView.classList.remove('hidden');
+    return;
+  }
+
+  // Successful signup confirmation (or magic link) — Supabase hands us a
+  // real session for the account this token belongs to. Log in as THAT
+  // account, overwriting whatever was previously saved in this browser.
+  const refreshToken = params.get('refresh_token');
+  fetch(`${AUTH_BASE}/user`, {
+    headers: { apikey: CONFIG.SUPABASE_ANON_KEY, Authorization: `Bearer ${accessToken}` },
+  })
+    .then((r) => (r.ok ? r.json() : Promise.reject()))
+    .then((user) => {
+      history.replaceState(null, '', window.location.pathname);
+      saveSession({ access_token: accessToken, refresh_token: refreshToken, user });
+      showApp();
+    })
+    .catch(() => {
+      history.replaceState(null, '', window.location.pathname);
+    });
 }
-checkForRecoveryLink();
+checkForAuthRedirect();
 
 btnResetSubmit.addEventListener('click', async () => {
   const password = inputNewPassword.value;
